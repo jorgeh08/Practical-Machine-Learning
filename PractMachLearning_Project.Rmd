@@ -1,0 +1,123 @@
+---
+title: "Practical Machine Learning Course Project"
+author: "Jorge Herrera"
+date: "April 15, 2016"
+output: html_document
+---
+
+
+#Introduction
+
+These are the files produced during a homework assignment of Coursera's MOOC Practical Machine Learning from Johns Hopkins University.  
+Here is the introduction of the exercise:  
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement-a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).  
+
+##Study Objective:  
+The goal of your project is to predict the manner in which they did the exercise. This is the "classe" variable in the training set. You may use any of the other variables to predict with. You should create a report describing how you built your model, how you used cross validation, what you think the expected out of sample error is, and why you made the choices you did. You will also use your prediction model to predict 20 different test cases.  
+
+#Data
+
+The training data for this project are available here: https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+The test data are available here: https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+The data for this project come from this source: http://groupware.les.inf.puc-rio.br/har. If you use the document you create for this class for any purpose please cite them as they have been very generous in allowing their data to be used for this kind of assignment.  
+
+#Getting and loading the data
+The training dataset will be used to develop the models and the Testing dataset will be use to verify the accuracy of the models.  
+```{r}
+set.seed(555)
+
+URL_training <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+URL_testing <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+
+training_set <- read.csv(url(URL_training), na.strings=c("NA","#DIV/0!",""))
+testing_set <- read.csv(url(URL_testing), na.strings=c("NA","#DIV/0!",""))
+```
+
+For this study we will need the following R packages:  
+```{r}
+library(caret)
+library(ggplot2)
+library(rpart)
+library(rpart.plot)
+library(rattle)
+library(randomForest)
+library(RColorBrewer)
+library(knitr)
+```
+
+Now we will proceed to split the training set into two, in order to measure the out of sample accuracy of the model.  
+
+```{r}
+inTrain <- createDataPartition(training_set$classe, p=0.75, list=FALSE)
+training_part <- training_set[inTrain, ]
+testing_part <- training_set[-inTrain, ]
+```
+
+#Cleaning and organizing the data
+
+First let's proceed to remove all the variables that have no variability by applying the NearZeroVariance command from the Caret package:  
+
+```{r}
+no_var <- nearZeroVar(training_part, saveMetrics=TRUE)
+training_part <- training_part[,no_var$nzv==FALSE]
+testing_part <- testing_part[,no_var$nzv==FALSE]
+testing_set <- testing_set[,no_var$nzv==FALSE]
+```
+
+Clean variables with more than 50% NA
+
+```{r}
+NA_values <- sapply(training_part, function(x) mean(is.na(x))) > 0.5
+training_part <- training_part[, NA_values==FALSE]
+testing_part <- testing_part[, NA_values==FALSE]
+testing_set <- testing_set[, NA_values==FALSE]
+```
+
+Remove the first and last column of the data sets
+
+```{r}
+
+training_part <- training_part[,-(1:5)]
+testing_part <- testing_part[,-(1:5)]
+testing_set <- testing_set[,-(1:5)]
+```
+
+#Prediction with Decision Trees
+```{r}
+set.seed(555)
+model_fit_01 <- rpart(classe ~ ., data=training_part, method="class")
+fancyRpartPlot(model_fit_01)
+prediction_01 <- predict(model_fit_01, testing_part, type = "class")
+cmtree <- confusionMatrix(prediction_01, testing_part$classe)
+cmtree
+plot(cmtree$table, col = cmtree$byClass, main = paste("Decision Tree Confusion Matrix: Accuracy =", round(cmtree$overall['Accuracy'], 4)))
+```
+
+#Prediction with Random Forests
+
+```{r}
+set.seed(555)
+model_fit_02 <- randomForest(classe ~ ., data=training_part)
+prediction_02 <- predict(model_fit_02, testing_part, type = "class")
+cmrf <- confusionMatrix(prediction_02, testing_part$classe)
+cmrf
+plot(model_fit_02)
+plot(cmrf$table, col = cmtree$byClass, main = paste("Random Forest Confusion Matrix: Accuracy =", round(cmrf$overall['Accuracy'], 4)))
+```
+
+
+#Validation of Prediction Models with Test Dataset
+
+Random Forests gave an Accuracy in the testing_part dataset of `r cmrf$overall[1]`, versus an Accuracy of `r cmtree$overall[1]` from the Decision Trees method. what.
+
+The expected out-of-sample error for the Decision Trees is: `r 1-cmtree$overall[1]`.  
+The expected out-of sample error for the Random Forest is: `r 1-cmrf$overall[1]`.  
+
+##Therfore we will proceed to test with the Random Forest Model:  
+
+```{r}
+prediction_test <- predict(model_fit_02, testing_set , type = "class")
+prediction_test
+```
