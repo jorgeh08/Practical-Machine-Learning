@@ -80,7 +80,7 @@ testing_part <- testing_part[, NA_values==FALSE]
 testing_set <- testing_set[, NA_values==FALSE]
 ```
 
-Remove the first and last column of the data sets
+Remove the non relevant variables (1-5) of the data sets
 
 
 ```r
