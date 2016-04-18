@@ -267,7 +267,7 @@ testing_part &lt;- testing_part[, NA_values==FALSE]
 testing_set &lt;- testing_set[, NA_values==FALSE]
 </code></pre>
 
-<p>Remove the first and last column of the data sets</p>
+<p>Remove the non relevant variables (1-5) of the data sets</p>
 
 <pre><code class="r">training_part &lt;- training_part[,-(1:5)]
 testing_part &lt;- testing_part[,-(1:5)]
